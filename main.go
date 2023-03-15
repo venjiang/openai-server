@@ -7,9 +7,8 @@ import (
 )
 
 func main() {
-	addr := ":9080"
-	fmt.Printf("OpenAI GPT Mock Server running: %s\n", addr)
-	if err := server.Run(addr); err != nil {
+	fmt.Println("OpenAI GPT Mock Server running")
+	if err := server.Run(); err != nil {
 		panic(err)
 	}
 }
