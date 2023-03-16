@@ -4,12 +4,15 @@ go 1.18
 
 require (
 	github.com/gin-gonic/gin v1.9.0
+	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
+	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/sashabaranov/go-openai v1.5.1
 )
 
 require (
 	github.com/bytedance/sonic v1.8.5 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
+	github.com/corpix/uarand v0.0.0-20170723150923-031be390f409 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect

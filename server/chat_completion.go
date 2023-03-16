@@ -1,9 +1,10 @@
 package server
 
 import (
+	"encoding/json"
+	"io"
+	"math/rand"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -26,15 +27,20 @@ func ChatCompletionHandler(c *gin.Context) {
 
 func handleChatCompletion(req *openai.ChatCompletionRequest, c *gin.Context) {
 	res := openai.ChatCompletionResponse{
-		ID:      strconv.Itoa(int(time.Now().Unix())),
-		Object:  "test-object",
+		ID:      PrefixID("chatcmpl-"),
+		Object:  "chat.completion",
 		Created: time.Now().Unix(),
 		Model:   req.Model,
 	}
-	// create completions
+	rand.Seed(time.Now().UnixNano())
+	if req.N == 0 {
+		req.N = rand.Intn(3)
+	}
+	if req.MaxTokens == 0 {
+		req.MaxTokens = rand.Intn(64)
+	}
 	for i := 0; i < req.N; i++ {
-		// generate a random string of length completionReq.Length
-		completionStr := strings.Repeat("a", req.MaxTokens)
+		completionStr := RandomContent()
 
 		res.Choices = append(res.Choices, openai.ChatCompletionChoice{
 			Message: openai.ChatCompletionMessage{
@@ -55,28 +61,72 @@ func handleChatCompletion(req *openai.ChatCompletionRequest, c *gin.Context) {
 }
 
 func handleChatCompletionStream(req *openai.ChatCompletionRequest, c *gin.Context) {
+	resChan := make(chan *openai.ChatCompletionStreamResponse)
+	go func() {
+		defer close(resChan)
+		rand.Seed(time.Now().UnixNano())
+		n := rand.Intn(20)
+		id := PrefixID("chatcmpl-")
+		for i := 0; i < n; i++ {
+			delay := rand.Int63n(300) * 1e6
+			time.Sleep(time.Duration(delay))
+			res := openai.ChatCompletionStreamResponse{
+				ID:      id,
+				Object:  "chat.completion.chunk",
+				Created: time.Now().Unix(),
+				Model:   req.Model,
+			}
+			content := RandomContent()
+			choise := openai.ChatCompletionStreamChoice{
+				Delta: openai.ChatCompletionStreamChoiceDelta{
+					Content: content,
+				},
+			}
+			if i == n-1 {
+				choise.Delta = openai.ChatCompletionStreamChoiceDelta{}
+				choise.FinishReason = "stop"
+			}
+			res.Choices = append(res.Choices, choise)
+			resChan <- &res
+		}
+	}()
+	// stream
+	SetStreamHeaders(c)
+	c.Stream(func(w io.Writer) bool {
+		data := []byte("data: ")
+		// chunk data
+		if res, ok := <-resChan; ok {
+			chunk, err := json.Marshal(res)
+			if err != nil {
+				w.Write([]byte("data: [ERROR]\n\n"))
+				return false
+			}
+			// write
+			data = append(data, chunk...)
+			data = append(data, []byte("\n\n")...)
+			_, err = w.Write(data)
+			if err != nil {
+				w.Write([]byte("data: [ERROR]\n\n"))
+				return false
+			}
+			return true
+		}
+		// done
+		w.Write([]byte("data: [DONE]\n\n"))
+		return false
+	})
+}
+
+func SetStreamHeaders(c *gin.Context) {
+	c.Header("Access-Control-Allow-Origin", "*")
 	c.Header("Content-Type", "text/event-stream")
-	// Send test responses
-	dataBytes := []byte{}
-	dataBytes = append(dataBytes, []byte("event: message\n")...)
-	//nolint:lll
-	data := `{"id":"1","object":"completion","created":1598069254,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"response1"},"finish_reason":"max_tokens"}]}`
-	dataBytes = append(dataBytes, []byte("data: "+data+"\n\n")...)
-
-	dataBytes = append(dataBytes, []byte("event: message\n")...)
-	//nolint:lll
-	data = `{"id":"2","object":"completion","created":1598069255,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"response2"},"finish_reason":"max_tokens"}]}`
-	dataBytes = append(dataBytes, []byte("data: "+data+"\n\n")...)
-
-	dataBytes = append(dataBytes, []byte("event: done\n")...)
-	dataBytes = append(dataBytes, []byte("data: [DONE]\n\n")...)
-
-	_, err := c.Writer.Write(dataBytes)
-	if err != nil {
-		c.Error(err)
-		return
-	}
-	c.Status(http.StatusOK)
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	// c.Header("openai-model", req.Model)
+	// c.Header("openai-organization", "yomo")
+	// c.Header("openai-processing-ms", ms)
+	// c.Header("openai-version", "mock")
+	// c.Header("x-request-id", req.ID)
 }
 
 // numTokens Returns the number of GPT-3 encoded tokens in the given text.
