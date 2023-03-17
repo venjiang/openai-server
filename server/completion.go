@@ -11,24 +11,24 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-func ChatCompletionHandler(c *gin.Context) {
-	var req openai.ChatCompletionRequest
+func CompletionHandler(c *gin.Context) {
+	var req openai.CompletionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	// stream
 	if req.Stream {
-		handleChatCompletionStream(&req, c)
+		handleCompletionStream(&req, c)
 		return
 	}
-	handleChatCompletion(&req, c)
+	handleCompletion(&req, c)
 }
 
-func handleChatCompletion(req *openai.ChatCompletionRequest, c *gin.Context) {
-	res := openai.ChatCompletionResponse{
-		ID:      PrefixID("chatcmpl-"),
-		Object:  "chat.completion",
+func handleCompletion(req *openai.CompletionRequest, c *gin.Context) {
+	res := openai.CompletionResponse{
+		ID:      PrefixID("cmpl-"),
+		Object:  "text_completion",
 		Created: time.Now().Unix(),
 		Model:   req.Model,
 	}
@@ -41,16 +41,15 @@ func handleChatCompletion(req *openai.ChatCompletionRequest, c *gin.Context) {
 	}
 	for i := 0; i < req.N; i++ {
 		completionStr := RandomContent()
-
-		res.Choices = append(res.Choices, openai.ChatCompletionChoice{
-			Message: openai.ChatCompletionMessage{
-				Role:    openai.ChatMessageRoleAssistant,
-				Content: completionStr,
-			},
+		if req.Echo {
+			completionStr = req.Prompt + "\n\n" + completionStr
+		}
+		res.Choices = append(res.Choices, openai.CompletionChoice{
+			Text:  completionStr,
 			Index: i,
 		})
 	}
-	inputTokens := numTokens(req.Messages[0].Content) * req.N
+	inputTokens := numTokens(req.Prompt) * req.N
 	completionTokens := req.MaxTokens * req.N
 	res.Usage = openai.Usage{
 		PromptTokens:     inputTokens,
@@ -60,30 +59,27 @@ func handleChatCompletion(req *openai.ChatCompletionRequest, c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func handleChatCompletionStream(req *openai.ChatCompletionRequest, c *gin.Context) {
-	resChan := make(chan *openai.ChatCompletionStreamResponse)
+func handleCompletionStream(req *openai.CompletionRequest, c *gin.Context) {
+	resChan := make(chan *openai.CompletionResponse)
 	go func() {
 		defer close(resChan)
 		rand.Seed(time.Now().UnixNano())
 		n := rand.Intn(20)
-		id := PrefixID("chatcmpl-")
+		id := PrefixID("cmpl-")
 		for i := 0; i < n; i++ {
 			delay := rand.Int63n(300) * 1e6
 			time.Sleep(time.Duration(delay))
-			res := openai.ChatCompletionStreamResponse{
+			res := openai.CompletionResponse{
 				ID:      id,
-				Object:  "chat.completion.chunk",
+				Object:  "text_completion",
 				Created: time.Now().Unix(),
 				Model:   req.Model,
 			}
 			content := RandomContent()
-			choise := openai.ChatCompletionStreamChoice{
-				Delta: openai.ChatCompletionStreamChoiceDelta{
-					Content: content,
-				},
+			choise := openai.CompletionChoice{
+				Text: content,
 			}
 			if i == n-1 {
-				choise.Delta = openai.ChatCompletionStreamChoiceDelta{}
 				choise.FinishReason = "stop"
 			}
 			res.Choices = append(res.Choices, choise)
