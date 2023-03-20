@@ -65,7 +65,7 @@ func handleChatCompletionStream(req *openai.ChatCompletionRequest, c *gin.Contex
 	go func() {
 		defer close(resChan)
 		rand.Seed(time.Now().UnixNano())
-		n := rand.Intn(20)
+		n := rand.Intn(50) + 5
 		id := PrefixID("chatcmpl-")
 		for i := 0; i < n; i++ {
 			delay := (rand.Int63n(500) + 50) * 1e6
@@ -77,6 +77,7 @@ func handleChatCompletionStream(req *openai.ChatCompletionRequest, c *gin.Contex
 				Model:   req.Model,
 			}
 			content := RandomContent()
+			// content := RandomChar()
 			choise := openai.ChatCompletionStreamChoice{
 				Delta: openai.ChatCompletionStreamChoiceDelta{
 					Content: content,

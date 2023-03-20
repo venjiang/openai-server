@@ -64,7 +64,7 @@ func handleCompletionStream(req *openai.CompletionRequest, c *gin.Context) {
 	go func() {
 		defer close(resChan)
 		rand.Seed(time.Now().UnixNano())
-		n := rand.Intn(20)
+		n := rand.Intn(20) + 3
 		id := PrefixID("cmpl-")
 		for i := 0; i < n; i++ {
 			delay := (rand.Int63n(500) + 50) * 1e6

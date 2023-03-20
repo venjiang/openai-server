@@ -14,19 +14,21 @@ import (
 const alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 var fns = []func() string{
+	fake.Character,
+	fake.Characters,
 	fake.UserName,
 	fake.Word,
-	fake.Words,
+	// fake.Words,
 	// fake.Sentence,
 	// fake.Sentences,
 	fake.ProductName,
-	fake.Brand,
+	// fake.Brand,
 	fake.City,
 	fake.Color,
-	fake.Title,
+	// fake.Title,
 	// fake.Street,
-	fake.Country,
-	fake.City,
+	// fake.Country,
+	// fake.City,
 	// fake.Company,
 }
 
@@ -49,6 +51,10 @@ func RandomContent() string {
 	rand.Seed(time.Now().UnixNano())
 	n := rand.Intn(len(fns))
 	return fns[n]()
+}
+
+func RandomChar() string {
+	return fake.Character()
 }
 
 func ID(length ...int) string {
