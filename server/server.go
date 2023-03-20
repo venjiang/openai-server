@@ -17,17 +17,17 @@ var fns = []func() string{
 	fake.UserName,
 	fake.Word,
 	fake.Words,
-	fake.Sentence,
-	fake.Sentences,
+	// fake.Sentence,
+	// fake.Sentences,
 	fake.ProductName,
 	fake.Brand,
 	fake.City,
 	fake.Color,
 	fake.Title,
-	fake.Street,
+	// fake.Street,
 	fake.Country,
 	fake.City,
-	fake.Company,
+	// fake.Company,
 }
 
 func init() {

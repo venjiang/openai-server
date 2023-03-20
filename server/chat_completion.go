@@ -68,7 +68,7 @@ func handleChatCompletionStream(req *openai.ChatCompletionRequest, c *gin.Contex
 		n := rand.Intn(20)
 		id := PrefixID("chatcmpl-")
 		for i := 0; i < n; i++ {
-			delay := rand.Int63n(300) * 1e6
+			delay := (rand.Int63n(500) + 50) * 1e6
 			time.Sleep(time.Duration(delay))
 			res := openai.ChatCompletionStreamResponse{
 				ID:      id,
